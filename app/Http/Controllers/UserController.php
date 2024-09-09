@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+
+use function Laravel\Prompts\password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 class UserController extends Controller
 {
     public function index(){
@@ -29,7 +33,7 @@ class UserController extends Controller
         
        //Quantidade de registros implementados
        $numberRegisteredRecords = 0;
-
+       $emailAlreadyRegistered=false;
        foreach ($dataFile as $keyData => $row  ) {
             //COnverter a linha em array
             $values = explode(';',$row[0]);
@@ -39,11 +43,32 @@ class UserController extends Controller
             foreach($headers as $key=>$header){
                //Atribuir o valor ao elemento do array
                 $arrayValues[$keyData][$header] = $values[$key];
+
+                if($header =="email"){
+                    //Verificar se o email já está no banco de dados
+                    if(User::where('email',$values[$key])->first()){
+                        //ATribuir o e-mail na lista de e-mails já cadastrados
+                        $emailAlreadyRegistered .= $values[$key] . ", ";
+                    }
+                }
+
+                //Verificar se a coluna é senha
+                if($header =="password"){
+                    //Criptografar a senha
+
+                    $arrayValues[$keyData][$header] = Hash::make(Str::random(7),['rounds'=>12]);
+                }
             }
-            $numberRegisteredRecords++;
 
            
+            $numberRegisteredRecords++;
+           
 
+        }
+
+        if($emailAlreadyRegistered){
+            //Redireciona o usuário para a página anterior e envia a mensagem de erro
+            return back()->with('error', 'Email já cadastrado no banco de dados'.$emailAlreadyRegistered);
         }
 
         //Cadastrar registros no banco de dados
